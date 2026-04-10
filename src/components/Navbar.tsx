@@ -2,72 +2,77 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const LINKS = [
-  ['Features', '#features'],
-  ['Pricing', '/pricing'],
-  ['Dashboard', '/dashboard'],
+const NAV = [
+  { label: 'Platform', href: '#platform' },
+  { label: 'Solutions', href: '#solutions' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'About', href: '#about' },
 ]
 
 export default function Navbar() {
-  const [blur, setBlur] = useState(false)
+  const [shadow, setShadow] = useState(false)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const fn = () => setBlur(window.scrollY > 24)
+    const fn = () => setShadow(window.scrollY > 8)
     window.addEventListener('scroll', fn)
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
   return (
-    <nav
-      className="fixed top-0 inset-x-0 z-50 transition-all duration-300"
-      style={blur ? {
-        background: 'rgba(9,13,24,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid #1a2540',
-      } : {}}
+    <header
+      className="fixed top-0 inset-x-0 z-50 bg-white transition-all duration-200"
+      style={shadow ? { boxShadow: '0 1px 0 #e4e8f0, 0 2px 12px rgba(10,14,26,0.06)' } : { borderBottom: '1px solid #e4e8f0' }}
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center font-black text-white text-sm shadow-lg">F</div>
-          <span className="font-bold text-lg tracking-tight text-white">Finsyt</span>
-        </Link>
+      <div className="container" style={{ maxWidth: 1200 }}>
+        <div className="flex items-center h-[68px] gap-8">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-sm"
+              style={{ background: 'linear-gradient(135deg, #1a4fff, #00c2a8)' }}>F</div>
+            <span className="font-extrabold text-[1.0625rem] tracking-tight text-[#0a0e1a]">Finsyt</span>
+          </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {LINKS.map(([l, h]) => (
-            <Link key={l} href={h}
-              className="btn btn-ghost text-sm">{l}</Link>
-          ))}
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-6 flex-1">
+            {NAV.map(n => (
+              <Link key={n.label} href={n.href} className="nav-link">{n.label}</Link>
+            ))}
+          </nav>
+
+          <div className="hidden md:flex items-center gap-3 ml-auto">
+            <Link href="/auth/sign-in" className="nav-link font-semibold" style={{ borderBottom: 'none', padding: '0.375rem 0.75rem' }}>
+              Log In →
+            </Link>
+            <Link href="/auth/sign-up" className="btn btn-blue btn-sm">Get Started for Free</Link>
+          </div>
+
+          {/* Mobile */}
+          <button className="md:hidden ml-auto p-2 rounded-lg" onClick={() => setOpen(!open)}
+            style={{ border: '1.5px solid #e4e8f0' }}>
+            <div className="flex flex-col gap-1.5">
+              <span className="block w-4.5 h-0.5 bg-[#3a4460]" style={{ width: 18 }} />
+              <span className="block w-4.5 h-0.5 bg-[#3a4460]" style={{ width: 18 }} />
+              <span className="block w-3 h-0.5 bg-[#3a4460]" style={{ width: 12 }} />
+            </div>
+          </button>
         </div>
-
-        <div className="hidden md:flex items-center gap-2.5">
-          <Link href="/auth/sign-in" className="btn btn-outline btn-sm">Sign in</Link>
-          <Link href="/auth/sign-up" className="btn btn-primary btn-sm">Get started</Link>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button className="md:hidden flex flex-col gap-1.5 p-2" onClick={() => setOpen(!open)}>
-          <span className="block w-5 h-0.5 bg-gray-400" />
-          <span className="block w-5 h-0.5 bg-gray-400" />
-          <span className="block w-4 h-0.5 bg-gray-400" />
-        </button>
       </div>
 
       {open && (
-        <div className="md:hidden px-6 pb-5 flex flex-col gap-1"
-          style={{ background: 'rgba(9,13,24,0.97)', borderBottom: '1px solid #1a2540' }}>
-          {LINKS.map(([l, h]) => (
-            <Link key={l} href={h} className="nav-link" onClick={() => setOpen(false)}>{l}</Link>
+        <div className="md:hidden bg-white px-6 pb-6 flex flex-col gap-1"
+          style={{ borderTop: '1px solid #e4e8f0' }}>
+          {NAV.map(n => (
+            <Link key={n.label} href={n.href}
+              className="py-3 font-medium text-[#3a4460] border-b border-[#e4e8f0]"
+              onClick={() => setOpen(false)}>{n.label}</Link>
           ))}
-          <div className="flex flex-col gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #1a2540' }}>
-            <Link href="/auth/sign-in" className="btn btn-outline" onClick={() => setOpen(false)}>Sign in</Link>
-            <Link href="/auth/sign-up" className="btn btn-primary" onClick={() => setOpen(false)}>Get started</Link>
+          <div className="flex flex-col gap-2 mt-4">
+            <Link href="/auth/sign-in" className="btn btn-ghost" onClick={() => setOpen(false)}>Log In</Link>
+            <Link href="/auth/sign-up" className="btn btn-blue" onClick={() => setOpen(false)}>Get Started for Free</Link>
           </div>
         </div>
       )}
-    </nav>
+    </header>
   )
 }
