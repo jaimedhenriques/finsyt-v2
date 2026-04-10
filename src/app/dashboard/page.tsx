@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import AppShell from '@/components/AppShell'
+import { useDashboard } from '@/lib/hooks'
 
 const WATCHLIST = [
   { t: 'SPY',    name: 'S&P 500 ETF',    price: '521.34', ch: '+1.2%',  up: true },
@@ -10,17 +11,23 @@ const WATCHLIST = [
   { t: 'TLT',    name: '20yr Treasury',   price: '94.12',  ch: '-0.5%',  up: false },
 ]
 
-const INSIGHTS = [
-  { tag: 'MACRO',    col: '#3b82f6', title: 'US CPI beats estimates — markets reprice rate cuts', t: '2m ago',  impact: 'High' },
-  { tag: 'EARNINGS', col: '#8b5cf6', title: 'NVIDIA Q1 beat: revenue +262% YoY, stock +8% AH',   t: '18m ago', impact: 'High' },
-  { tag: 'GLOBAL',   col: '#0d9488', title: 'ECB signals pause in rate cuts — services CPI sticky', t: '1h ago',  impact: 'Med' },
-  { tag: 'SIGNAL',   col: '#f59e0b', title: 'USD/JPY at 158 — BOJ intervention risk elevated',     t: '3h ago',  impact: 'Med' },
-]
-
 const BARS = [30, 38, 35, 50, 44, 60, 55, 68, 62, 76, 71, 84, 80, 91, 87, 96, 90, 100]
+
+const SIGNAL_COLORS: Record<string, string> = {
+  positive: '#4ade80',
+  negative: '#f87171',
+  neutral: '#fbbf24'
+}
+
+const IMPACT_STYLES: Record<string, { bg: string; color: string }> = {
+  high: { bg: 'rgba(239,68,68,0.1)', color: '#f87171' },
+  medium: { bg: 'rgba(245,158,11,0.1)', color: '#fbbf24' },
+  low: { bg: 'rgba(96,165,250,0.1)', color: '#60a5fa' }
+}
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('1M')
+  const { data, loading, error, refetch } = useDashboard()
 
   return (
     <AppShell>
@@ -46,10 +53,30 @@ export default function Dashboard() {
         {/* Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
-            { l: 'Portfolio Value', v: '$2.41M', ch: '+$28.4K today', up: true },
-            { l: 'Active Signals',  v: '47',     ch: '+12 since yesterday', up: true },
-            { l: 'AI Insights',     v: '18 new', ch: 'Updated 2 min ago', up: null },
-            { l: 'Alerts',          v: '3',      ch: '2 high priority', up: false },
+            {
+              l: 'Countries Tracked',
+              v: loading ? '...' : `${data?.countries?.length || 0}`,
+              ch: 'Real-time World Bank data',
+              up: null
+            },
+            {
+              l: 'Active Signals',
+              v: loading ? '...' : `${data?.summary?.signalCount || 0}`,
+              ch: `${data?.summary?.highImpactSignals || 0} high impact`,
+              up: data?.summary?.highImpactSignals ? false : null
+            },
+            {
+              l: 'Indicators',
+              v: loading ? '...' : `${data?.summary?.totalIndicators || 0}`,
+              ch: `${data?.summary?.positiveChanges || 0} positive trends`,
+              up: (data?.summary?.positiveChanges || 0) > (data?.summary?.negativeChanges || 0)
+            },
+            {
+              l: 'Data Sources',
+              v: '50+',
+              ch: 'IMF, BIS, World Bank',
+              up: null
+            },
           ].map((m, i) => (
             <div key={i} className="card">
               <div className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#6b7a99' }}>{m.l}</div>
@@ -117,25 +144,66 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* AI Insights */}
+        {/* AI Insights - World Bank Macro Signals */}
         <div className="card">
-          <div className="font-bold mb-4">AI Insights Feed</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {INSIGHTS.map((ins, i) => (
-              <div key={i} className="p-4 rounded-xl cursor-pointer"
-                style={{ background: '#090d18', border: '1px solid #1a2540' }}>
-                <div className="flex gap-2 items-center mb-2.5 flex-wrap">
-                  <span className="badge" style={{ background: `${ins.col}15`, color: ins.col }}>{ins.tag}</span>
-                  <span className="badge" style={ins.impact === 'High'
-                    ? { background: 'rgba(239,68,68,0.1)', color: '#f87171' }
-                    : { background: 'rgba(245,158,11,0.1)', color: '#fbbf24' }}>
-                    {ins.impact} impact
-                  </span>
-                  <span className="text-xs ml-auto" style={{ color: '#2a3450' }}>{ins.t}</span>
-                </div>
-                <div className="text-sm font-semibold leading-snug">{ins.title}</div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="font-bold">Macro Signals</div>
+              <div className="text-xs mt-0.5" style={{ color: '#6b7a99' }}>
+                {loading ? 'Loading...' : `${data?.summary?.signalCount || 0} signals from World Bank data`}
               </div>
-            ))}
+            </div>
+            <button onClick={refetch} className="btn btn-primary btn-sm" disabled={loading}>
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="p-4 rounded-xl mb-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <div className="text-sm text-red-400">Error loading signals: {error}</div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="p-4 rounded-xl animate-pulse"
+                  style={{ background: '#090d18', border: '1px solid #1a2540' }}>
+                  <div className="h-4 w-24 rounded mb-3" style={{ background: '#1a2540' }} />
+                  <div className="h-4 w-full rounded mb-2" style={{ background: '#1a2540' }} />
+                  <div className="h-4 w-3/4 rounded" style={{ background: '#1a2540' }} />
+                </div>
+              ))
+            ) : data?.signals?.length ? (
+              data.signals.slice(0, 8).map((signal) => (
+                <div key={signal.id} className="p-4 rounded-xl cursor-pointer hover:border-blue-500/50 transition-colors"
+                  style={{ background: '#090d18', border: '1px solid #1a2540' }}>
+                  <div className="flex gap-2 items-center mb-2.5 flex-wrap">
+                    <span className="badge" style={{
+                      background: `${SIGNAL_COLORS[signal.type]}15`,
+                      color: SIGNAL_COLORS[signal.type]
+                    }}>
+                      {signal.country}
+                    </span>
+                    <span className="badge" style={IMPACT_STYLES[signal.impact]}>
+                      {signal.impact} impact
+                    </span>
+                    <span className="text-xs ml-auto" style={{ color: '#2a3450' }}>
+                      {signal.indicator}
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold leading-snug">{signal.title}</div>
+                  <div className="text-xs mt-2" style={{ color: '#6b7a99' }}>
+                    {signal.data.changePercent >= 0 ? '+' : ''}{signal.data.changePercent.toFixed(1)}% YoY
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 text-center py-8 text-sm" style={{ color: '#6b7a99' }}>
+                No signals available. Data may still be loading from World Bank API.
+              </div>
+            )}
           </div>
         </div>
       </div>
